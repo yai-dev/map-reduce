@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+// NotifyOp defines the notify operation
+// between the Master and Worker.
+enum NotifyOp {
+  UNKNOWN_NOTIFY_OP = 0; // Unknown notification.
+  HEARTBEAT = 1; // Heartbeat notification.
+  TASK_COMPLETED = 2; // Task completed notification.
+  ACQUIRE_TASK = 3;// Acquire task notification.
+}
+
+// RegisterRequest holds all the fields that Worker
+// needs to provide to register itself with the Master.
+message RegisterRequest {
+  string identifier = 1; // [REQUIRED] Identifier for the Worker.
+  string host = 2; // [REQUIRED] Worker's host.
+  uint32 port = 3; // [REQUIRED] Worker's port.
+}
+
+// RegisterResponse defines the list of response fields when the
+// Worker successfully registers itself with the Master.
+message RegisterResponse {
+  bool succeed = 1; // True when register succeed.
+  string message = 2; // Response message string.
+  google.protobuf.Timestamp timestamp = 3; // Response timestamp.
+}
+
+// UnregisterRequest holds all the fields that Worker
+// needs to provides to unregister itself with the Master,
+// If the worker has unfinished task, the unregister operation
+// will failed.
+message UnregisterRequest {
+
+}
+
+message UnregisterResponse {
+
+}
+
+// MasterService provides the primitive API for Master and
+// Worker communication.
+service MasterService {
+
+  // Register using for Worker to register itself to Master.
+  rpc Register(RegisterRequest) returns (RegisterResponse) {}
+
+  // Unregister using for Worker to unregister itself from Master.
+
+  // Notify is used for the Worker to report its own status to the
+  // Master, and can also be used to report its own task completion status,
+  // with the parameter `Op` to distinguish the report action.
+}
