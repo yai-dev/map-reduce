@@ -11,11 +11,7 @@ type Config struct {
 	Network string `yaml:"network"`
 	Host    string `yaml:"host"`
 	Port    int    `yaml:"port"`
-	Sqlite  struct {
-		Path        string `yaml:"path"`
-		AutoMigrate bool   `yaml:"auto_migrate"`
-	} `yaml:"sqlite"`
-	Master struct {
+	Master  struct {
 		Snowflake struct {
 			NodeID int64 `yaml:"node_id"`
 		} `yaml:"snowflake"`
@@ -29,8 +25,13 @@ type Config struct {
 		} `yaml:"registry"`
 	} `yaml:"master"`
 	Worker struct {
-		Concurrency       int    `yaml:"concurrency"`
-		HeartbeatDuration string `yaml:"heartbeat_duration"`
+		HeartbeatDuration   string `yaml:"heartbeat_duration"`
+		AcquireTaskDuration string `yaml:"acquire_task_duration"`
+		Plugin              struct {
+			Enabled bool   `yaml:"enabled"`
+			Name    string `yaml:"name"`
+			Path    string `yaml:"path"`
+		} `yaml:"plugin"`
 	} `yaml:"worker"`
 	S3Endpoint         string `yaml:"s3_endpoint"`
 	TaskBucket         string `yaml:"task_bucket"`

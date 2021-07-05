@@ -2,12 +2,14 @@ type: 'worker'
 network: 'unix'
 host: '0.0.0.0'
 port: 8080
-sqlite:
-  path: 'db/map-reduce.db'
-  auto_migrate: false
 worker:
-  concurrency: 0
+  master_addr: 'localhost:8080'
+  acquire_task_duration: '10s'
   heartbeat_duration: '5s'
+  plugin:
+    name: 'word-count'
+    path: './plugin/word-count.so'
+    enabled: true
 s3_endpoint: 'localhost:38877'
 task_bucket: 'map-reduce'
 intermediate_bucket: 'intermediate'
