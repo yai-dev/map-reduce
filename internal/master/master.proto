@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "internal/master";
+
+// NotifyOp defines the notify operation
+// between the Master and Worker.
+enum NotifyOp {
+  OP_UNKNOWN = 0; // Unknown notification.
+  OP_HEARTBEAT = 1; // Heartbeat notification.
+  OP_TASK_COMPLETION = 2; // Task completed notification.
+  OP_ACQUIRE_TASK = 3;// Acquire task notification.
+  OP_REGISTER = 4; // Register the worker it self to the Master.
+  OP_UNREGISTER = 5; // Unregister worker it self from the Master.
+}
+
+// TaskType defines the task type.
+enum TaskType {
+  TASK_TYPE_UNKNOWN = 0; // Unknown task type.
+  TASK_TYPE_MAP = 1; // Map task.
+  TASK_TYPE_REDUCE = 2; // Reduce task.
+}
+
+// NotifyRequest defines the notify request packet.
+message NotifyRequest {
+  NotifyOp op = 1; // [REQUIRED] Notify operation for this time.
+  // [ADDITIONAL by NotifyOp] Payload for this time request packet, additional data for specific
+  // NotifyOp:
+  // - OP_UNKNOWN: none
+  // - OP_HEARTBEAT: WorkerReportPayload
+  // - OP_TASK_COMPLETION: TaskCompletionPayload
+  // - OP_ACQUIRE_TASK: TaskAcquirePayload
+  // - OP_REGISTER: RegisterPayload
+  // - OP_UNREGISTER: UnregisterPayload
+  google.protobuf.Any payload = 2;
+}
+
+// NotifyResponse defines the notify response packet.
+message NotifyResponse {
+  bool succeed = 1; // Returns `true` if succeed.
+  google.protobuf.Timestamp timestamp = 2; // Response timestamp.
+  string message = 3; // Operation response message, returns error message if succeed is false.
+  // [ADDITIONAL by NotifyOp] Payload for this time response packet, additional data for specific
+  // NotifyOp:
+  // - OP_UNKNOWN: none
+  // - OP_HEARTBEAT: none
+  // - OP_TASK_COMPLETION: none
+  // - OP_ACQUIRE_TASK: TaskPayload
+  // - OP_REGISTER: RegisteredPayload
+  // - OP_UNREGISTER: none
+  google.protobuf.Any payload = 4;
+}
+
+// RegisterPayload holds all the fields that Worker
+// needs to provide to register itself with the Master.
+message RegisterPayload {
+  string host = 2; // [REQUIRED] Worker's host.
+  uint32 port = 3; // [REQUIRED] Worker's port.
+}
+
+// RegisteredPayload holds the identifier for the Worker.
+message RegisteredPayload {
+  string identifier = 1; // Worker's identifier
+}
+
+// UnregisterPayload holds all the fields that Worker
+// needs to provides to unregister itself with the Master,
+// If the worker has unfinished task, the unregister operation
+// will failed.
+message UnregisterPayload {
+  string identifier = 1; // [REQUIRED] Identifier for the Worker.
+}
+
+// WorkerReportPayload holds all the fields for the Worker
+// status.
+message WorkerReportPayload {
+  string identifier = 1; // [REQUIRED] Identifier for the Worker.
+  string host = 2; // [REQUIRED] Host address for the Worker.
+  uint32 port = 3; // [REQUIRED] Port listening on for the Worker.
+  uint64 running = 4; // [REQUIRED] Running task counts at the Worker.
+  uint64 finished = 5; // [REQUIRED] Finished task counts at the Worker.
+  google.protobuf.Timestamp timestamp = 6; // [REQUIRED] Reported timestamp.
+}
+
+// TaskCompletionPayload using for Worker task completed notification,
+// Just includes the worker identifier, task id, finishing flag (true or false) and errors if exist.
+message TaskCompletionPayload {
+  string worker_identifier = 1; // [REQUIRED] Workers who finished the task.
+  string task_identifier = 2; // [REQUIRED] Finished task 's identifier.
+  bool finished = 3; // [REQUIRED] Returns `true` if task has been finished.
+  repeated string errors = 4; // [REQUIRED] Not nil if has some errors.
+}
+
+// TaskAcquirePayload using for Worker acquire the task from the Master.
+message TaskAcquirePayload {
+  string worker_identifier = 1; // [REQUIRED] Workers who acquire the task.
+  TaskType task_type = 2; // [REQUIRED] What type of acquired task.
+}
+
+// TaskPayload holds all the fields for the specific acquired task.
+message TaskPayload {
+  string task_identifier = 1; // [REQUIRED] Acquired task 's identifier.
+  TaskType type = 2; // [REQUIRED] Acquired task 's type.
+  string file_source = 3; // [REQUIRED] Task 's file source.
+}
+
+// MasterService provides the primitive API for Master and
+// Worker communication.
+service MasterService {
+
+  // Notify is used for the Worker to report its own status to the
+  // Master, and can also be used to report its own task completion status,
+  // with the parameter `Op` to distinguish the report action.
+  rpc Notify(NotifyRequest) returns (NotifyResponse) {}
+}

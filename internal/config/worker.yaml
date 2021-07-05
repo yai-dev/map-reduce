@@ -1,0 +1,16 @@
+type: 'worker'
+network: 'unix'
+host: '0.0.0.0'
+port: 8080
+sqlite:
+  path: 'db/map-reduce.db'
+  auto_migrate: false
+worker:
+  concurrency: 0
+  heartbeat_duration: '5s'
+s3_endpoint: 'localhost:38877'
+task_bucket: 'map-reduce'
+intermediate_bucket: 'intermediate'
+intermediate_prefix: 'intermediate-'
+result_bucket: 'reduced'
+result_prefix: 'reduced-'

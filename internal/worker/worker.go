@@ -1,5 +1,4 @@
-package svc
+package worker
 
 type Worker struct {
-
 }

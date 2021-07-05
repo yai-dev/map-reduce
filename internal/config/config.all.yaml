@@ -1,0 +1,25 @@
+type: 'master | worker'
+network: 'unix | tcp4 | tcp'
+host: '0.0.0.0'
+port: 8080
+sqlite:
+  path: 'db/map-reduce.db'
+  auto_migrate: false
+master:
+  snowflake:
+    node_id: 1
+  registry:
+    enabled: true
+    expiry:
+      expire_duration: '30s'
+      expiry_limit: 2
+      expired_evict_interval: '60s'
+worker:
+  concurrency: 0
+  heartbeat_duration: '5s'
+s3_endpoint: 'localhost:38877'
+task_bucket: 'map-reduce'
+intermediate_bucket: 'intermediate'
+intermediate_prefix: 'intermediate-'
+result_bucket: 'reduced'
+result_prefix: 'reduced-'
