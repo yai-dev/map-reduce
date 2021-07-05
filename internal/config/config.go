@@ -34,6 +34,8 @@ type Config struct {
 		} `yaml:"plugin"`
 	} `yaml:"worker"`
 	S3Endpoint         string `yaml:"s3_endpoint"`
+	AccessKey          string `yaml:"access_key"`
+	AccessSecret       string `yaml:"access_secret"`
 	TaskBucket         string `yaml:"task_bucket"`
 	IntermediateBucket string `yaml:"intermediate_bucket"`
 	IntermediatePrefix string `yaml:"intermediate_prefix"`

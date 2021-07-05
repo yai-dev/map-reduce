@@ -1,9 +1,10 @@
 package master
 
 import (
-	context "context"
+	"context"
 	"errors"
 
+	"github.com/suenchunyu/map-reduce/internal/pkg/master"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -16,35 +17,35 @@ type GrpcService struct {
 	m *Master
 }
 
-func (g *GrpcService) Notify(ctx context.Context, request *NotifyRequest) (*NotifyResponse, error) {
+func (g *GrpcService) Notify(ctx context.Context, request *master.NotifyRequest) (*master.NotifyResponse, error) {
 	switch request.Op {
-	case NotifyOp_OP_HEARTBEAT: // Heartbeat operation
+	case master.NotifyOp_OP_HEARTBEAT: // Heartbeat operation
 		return g.handleHeartbeatOperation(ctx, request)
-	case NotifyOp_OP_TASK_COMPLETION: // Task completion operation
-	case NotifyOp_OP_ACQUIRE_TASK: // Acquire task operation
-	case NotifyOp_OP_REGISTER: // Worker register operation
+	case master.NotifyOp_OP_TASK_COMPLETION: // Task completion operation
+	case master.NotifyOp_OP_ACQUIRE_TASK: // Acquire task operation
+	case master.NotifyOp_OP_REGISTER: // Worker register operation
 		return g.handleRegisterOperation(ctx, request)
-	case NotifyOp_OP_UNREGISTER: // Worker unregister operation
+	case master.NotifyOp_OP_UNREGISTER: // Worker unregister operation
 		return g.handleUnregisterOperation(ctx, request)
-	case NotifyOp_OP_UNKNOWN: // Unknown operation
+	case master.NotifyOp_OP_UNKNOWN: // Unknown operation
 		goto UnknownOperation
 	default:
 		goto UnknownOperation
 	}
 
 UnknownOperation:
-	return &NotifyResponse{
+	return &master.NotifyResponse{
 		Succeed:   false,
 		Timestamp: timestamppb.Now(),
 		Message:   ErrUnknownOperation.Error(),
 	}, ErrUnknownOperation
 }
 
-func (g *GrpcService) handleUnregisterOperation(ctx context.Context, request *NotifyRequest) (*NotifyResponse, error) {
-	payload := new(UnregisterPayload)
+func (g *GrpcService) handleUnregisterOperation(ctx context.Context, request *master.NotifyRequest) (*master.NotifyResponse, error) {
+	payload := new(master.UnregisterPayload)
 
 	if err := request.Payload.UnmarshalTo(payload); err != nil {
-		return &NotifyResponse{
+		return &master.NotifyResponse{
 			Succeed:   false,
 			Timestamp: timestamppb.Now(),
 			Message:   err.Error(),
@@ -52,25 +53,25 @@ func (g *GrpcService) handleUnregisterOperation(ctx context.Context, request *No
 	}
 
 	if err := g.m.unregister(payload.Identifier); err != nil {
-		return &NotifyResponse{
+		return &master.NotifyResponse{
 			Succeed:   false,
 			Timestamp: timestamppb.Now(),
 			Message:   err.Error(),
 		}, err
 	}
 
-	return &NotifyResponse{
+	return &master.NotifyResponse{
 		Succeed:   true,
 		Timestamp: timestamppb.Now(),
 		Message:   "succeed",
 	}, nil
 }
 
-func (g *GrpcService) handleHeartbeatOperation(ctx context.Context, request *NotifyRequest) (*NotifyResponse, error) {
-	payload := new(WorkerReportPayload)
+func (g *GrpcService) handleHeartbeatOperation(ctx context.Context, request *master.NotifyRequest) (*master.NotifyResponse, error) {
+	payload := new(master.WorkerReportPayload)
 
 	if err := request.Payload.UnmarshalTo(payload); err != nil {
-		return &NotifyResponse{
+		return &master.NotifyResponse{
 			Succeed:   false,
 			Timestamp: timestamppb.Now(),
 			Message:   err.Error(),
@@ -78,40 +79,40 @@ func (g *GrpcService) handleHeartbeatOperation(ctx context.Context, request *Not
 	}
 
 	if err := g.m.ping(payload); err != nil {
-		return &NotifyResponse{
+		return &master.NotifyResponse{
 			Succeed:   false,
 			Timestamp: timestamppb.Now(),
 			Message:   err.Error(),
 		}, err
 	}
 
-	return &NotifyResponse{
+	return &master.NotifyResponse{
 		Succeed:   true,
 		Timestamp: timestamppb.Now(),
 		Message:   "succeed",
 	}, nil
 }
 
-func (g *GrpcService) handleRegisterOperation(ctx context.Context, request *NotifyRequest) (*NotifyResponse, error) {
+func (g *GrpcService) handleRegisterOperation(ctx context.Context, request *master.NotifyRequest) (*master.NotifyResponse, error) {
 	var err error
 	var id string
-	var resp *NotifyResponse
-	var respPayload *RegisteredPayload
+	var resp *master.NotifyResponse
+	var respPayload *master.RegisteredPayload
 	var any *anypb.Any
 
-	payload := new(RegisterPayload)
+	payload := new(master.RegisterPayload)
 
 	if err = request.Payload.UnmarshalTo(payload); err != nil {
 		goto RespondFailed
 	}
 
 	id = g.m.register(payload)
-	resp = &NotifyResponse{
+	resp = &master.NotifyResponse{
 		Succeed:   true,
 		Timestamp: timestamppb.Now(),
 		Message:   "succeed",
 	}
-	respPayload = &RegisteredPayload{Identifier: id}
+	respPayload = &master.RegisteredPayload{Identifier: id}
 	any, err = anypb.New(respPayload)
 	if err != nil {
 		goto RespondFailed
@@ -121,7 +122,7 @@ func (g *GrpcService) handleRegisterOperation(ctx context.Context, request *Noti
 	return resp, nil
 
 RespondFailed:
-	return &NotifyResponse{
+	return &master.NotifyResponse{
 		Succeed:   false,
 		Timestamp: timestamppb.Now(),
 		Message:   err.Error(),

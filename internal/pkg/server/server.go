@@ -115,6 +115,8 @@ func WithNetwork(net Network) Option {
 	}
 }
 
+type StopHookFunc func() error
+
 type Server struct {
 	flag     Flag
 	network  Network
@@ -122,6 +124,7 @@ type Server struct {
 	port     int
 	listener net.Listener
 	server   *grpc.Server
+	hook     StopHookFunc
 }
 
 func New(opts ...Option) *Server {
@@ -140,6 +143,10 @@ func New(opts ...Option) *Server {
 
 func (s *Server) Raw() *grpc.Server {
 	return s.server
+}
+
+func (s *Server) StopHook(hookFunc StopHookFunc) {
+	s.hook = hookFunc
 }
 
 func (s *Server) Start() error {
@@ -174,7 +181,7 @@ func (s *Server) Start() error {
 	<-quit
 
 	s.server.GracefulStop()
-	return nil
+	return s.hook()
 }
 
 func DefaultSocketName() string {

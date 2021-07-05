@@ -9,7 +9,8 @@ import (
 
 	"github.com/suenchunyu/map-reduce/internal/config"
 	"github.com/suenchunyu/map-reduce/internal/model"
-	"github.com/suenchunyu/map-reduce/internal/server"
+	"github.com/suenchunyu/map-reduce/internal/pkg/master"
+	"github.com/suenchunyu/map-reduce/internal/pkg/server"
 	"github.com/suenchunyu/map-reduce/pkg/snowflake"
 )
 
@@ -31,7 +32,7 @@ type worker struct {
 
 type (
 	workers map[string]*worker
-	tasks   map[TaskType]*model.Task
+	tasks   map[master.TaskType]*model.Task
 )
 
 // Master represents the coordinator of the Map-Reduce cluster,
@@ -98,7 +99,7 @@ func New(c *config.Config) (*Master, error) {
 
 func (m *Master) Start() error {
 	// register gRPC service into gRPC server.
-	RegisterMasterServiceServer(
+	master.RegisterMasterServiceServer(
 		m.server.Raw(),
 		&GrpcService{
 			m: m,
@@ -112,7 +113,7 @@ func (m *Master) Start() error {
 	return m.server.Start()
 }
 
-func (m *Master) ping(payload *WorkerReportPayload) error {
+func (m *Master) ping(payload *master.WorkerReportPayload) error {
 	var worker *worker
 	var exist bool
 	m.mu.RLock()
@@ -135,7 +136,7 @@ func (m *Master) ping(payload *WorkerReportPayload) error {
 	return nil
 }
 
-func (m *Master) register(payload *RegisterPayload) string {
+func (m *Master) register(payload *master.RegisterPayload) string {
 	worker := new(worker)
 	worker.id = m.node.Generate().String()
 	worker.host = payload.Host

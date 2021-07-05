@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "internal/pkg/worker";
+
+// WorkerMode represents the processing mode
+// of the current Worker, the initial processing
+// mode is MODE_MAP.
+enum WorkerMode {
+  MODE_UNKNOWN = 0;
+  MODE_MAP = 1;
+  MODE_REDUCE = 2;
+}
+
+// ChangeModeRequest holds the target mode parameter
+// for changing the Worker processing mode.
+message ChangeModeRequest {
+  WorkerMode target_mode = 1; // [REQUIRED] Target mode.
+}
+
+// ChangeModeResponse holds the Worker latest processing
+// mode.
+message ChangeModeResponse {
+  bool succeed = 1; // Returns true if mode has been changed.
+  google.protobuf.Timestamp timestamp = 2; // Return timestamp.
+  string message = 3; // Response message, returns error message if succeed is false.
+  WorkerMode latest_mode = 4; // Worker latest processing mode.
+}
+
+// WorkerService provides the primitive API for changing Worker processing
+// mode.
+service WorkerService {
+  // ChangeWorkerMode is used for changing the Worker processing mode.
+  rpc ChangeWorkerMode(ChangeModeRequest) returns (ChangeModeResponse) {}
+}

@@ -10,6 +10,8 @@ worker:
     name: 'word-count'
     path: './plugin/word-count.so'
     enabled: true
+access_key: 'minio'
+access_secret: 'minio'
 s3_endpoint: 'localhost:38877'
 task_bucket: 'map-reduce'
 intermediate_bucket: 'intermediate'

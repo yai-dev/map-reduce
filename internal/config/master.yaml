@@ -11,6 +11,8 @@ master:
       expire_duration: '30s'
       expiry_limit: 2
       expired_evict_interval: '60s'
+access_key: 'minio'
+access_secret: 'minio'
 s3_endpoint: 'localhost:38877'
 task_bucket: 'map-reduce'
 intermediate_bucket: 'intermediate'

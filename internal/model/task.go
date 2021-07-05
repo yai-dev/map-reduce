@@ -1,6 +1,8 @@
 package model
 
-import "github.com/suenchunyu/map-reduce/internal/master"
+import (
+	"github.com/suenchunyu/map-reduce/internal/pkg/master"
+)
 
 type TaskFlag uint8
 

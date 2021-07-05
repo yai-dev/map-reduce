@@ -3,7 +3,7 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
 
-option go_package = "internal/master";
+option go_package = "internal/pkg/master";
 
 // NotifyOp defines the notify operation
 // between the Master and Worker.
