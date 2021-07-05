@@ -39,19 +39,19 @@ type (
 // and monitoring the health of workers, and maintains a table of
 // workers that serves as a registry.
 type Master struct {
-	mu     *sync.RWMutex // Mutex for workers table
-	server *server.Server
+	mu     *sync.RWMutex  // Mutex for workers table
+	server *server.Server // Server instance for Master.
 
-	expired         time.Duration
-	evict           time.Duration
-	limit           int
-	registryEnabled bool
+	expired         time.Duration // Worker expired interval
+	evict           time.Duration // Master eviction routine interval
+	limit           int           // Max evicted workers num for every tick
+	registryEnabled bool          // true if registry has enabled
 
-	idle  workers
-	busy  workers
-	tasks tasks
+	idle  workers // idle workers
+	busy  workers // busy workers
+	tasks tasks   // all tasks
 
-	node *snowflake.Node
+	node *snowflake.Node // snowflake identifier node
 }
 
 func New(c *config.Config) (*Master, error) {
@@ -110,6 +110,29 @@ func (m *Master) Start() error {
 	}
 
 	return m.server.Start()
+}
+
+func (m *Master) ping(payload *WorkerReportPayload) error {
+	var worker *worker
+	var exist bool
+	m.mu.RLock()
+	worker, exist = m.idle[payload.Identifier]
+	if !exist {
+		worker, exist = m.busy[payload.Identifier]
+		if !exist {
+			m.mu.RUnlock()
+			return errors.New("could not found the worker")
+		}
+	}
+	m.mu.RUnlock()
+
+	worker.host = payload.Host
+	worker.port = payload.Port
+	worker.finished = payload.Finished
+	worker.running = payload.Running
+	worker.reportedAt = time.Now().UnixNano()
+
+	return nil
 }
 
 func (m *Master) register(payload *RegisterPayload) string {
@@ -188,6 +211,7 @@ func (m *Master) eviction() {
 		}
 	}
 
+	// Shuffle and eviction
 	for i := 0; i < len(expired); i++ {
 		ran := i + rand.Intn(len(expired)-1)
 		expired[i], expired[ran] = expired[ran], expired[i]

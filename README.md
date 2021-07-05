@@ -16,6 +16,10 @@ Please follow the tips in Lab 1 to implement your own version of MapReduce.
 
 That's why I didn't use the official source code and chose to implement a new version of my own.
 
+## Architecture
+
+![design](./docs/map-reduce.png)
+
 ## License
 
 See [WTFPL](http://www.wtfpl.net/)
