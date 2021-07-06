@@ -1,18 +1,18 @@
 type: 'worker'
-network: 'unix'
+network: 'tcp4'
 host: '0.0.0.0'
-port: 8080
+port: 8081
 worker:
-  master_addr: 'localhost:8080'
+  master_address: 'localhost:8080'
   acquire_task_duration: '10s'
-  heartbeat_duration: '5s'
+  heartbeat_duration: '25s'
   plugin:
     name: 'word-count'
-    path: './plugin/word-count.so'
+    path: '/Volumes/SuenChunYu/Projects/Go/src/github.com/suenchunyu/map-reduce/plugin/word-count.so'
     enabled: true
-access_key: 'minio'
-access_secret: 'minio'
-s3_endpoint: 'localhost:38877'
+access_key: 'minioadmin'
+access_secret: 'minioadmin'
+s3_endpoint: 'localhost:9000'
 task_bucket: 'map-reduce'
 intermediate_bucket: 'intermediate'
 intermediate_prefix: 'intermediate-'

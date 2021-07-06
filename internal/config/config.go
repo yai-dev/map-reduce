@@ -25,6 +25,7 @@ type Config struct {
 		} `yaml:"registry"`
 	} `yaml:"master"`
 	Worker struct {
+		MasterAddress       string `yaml:"master_address"`
 		HeartbeatDuration   string `yaml:"heartbeat_duration"`
 		AcquireTaskDuration string `yaml:"acquire_task_duration"`
 		Plugin              struct {

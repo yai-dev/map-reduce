@@ -150,6 +150,13 @@ func (s *Server) StopHook(hookFunc StopHookFunc) {
 }
 
 func (s *Server) Start() error {
+
+	if s.hook == nil {
+		s.hook = func() error {
+			return nil
+		}
+	}
+
 	var listener net.Listener
 	var err error
 
@@ -174,6 +181,8 @@ func (s *Server) Start() error {
 			log.Fatalf("shutting down the gRPC server with unexpected error: %s", err)
 		}
 	}(s.server, s.listener)
+
+	log.Printf("server %s listen and serving at: %s:%d\n", s.flag, s.addr, s.port)
 
 	// graceful stop
 	quit := make(chan os.Signal, 1)

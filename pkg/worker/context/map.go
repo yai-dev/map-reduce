@@ -1,8 +1,9 @@
 package context
 
 import (
+	"bytes"
 	stdCtx "context"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -28,6 +29,8 @@ func NewMapContext(c *minio.Client, obj, bucket, id, interBucket, interPrefix st
 		id:          id,
 		obj:         obj,
 		minio:       c,
+		pairs:       make([]*Pair, 0),
+		pairsMap:    make(map[string][]*Pair),
 		interBucket: interBucket,
 		interPrefix: interPrefix,
 	}
@@ -35,7 +38,7 @@ func NewMapContext(c *minio.Client, obj, bucket, id, interBucket, interPrefix st
 	context, cancel := stdCtx.WithTimeout(stdCtx.Background(), 5*time.Second)
 	defer cancel()
 
-	object, err := c.GetObject(context, ctx.obj, bucket, minio.GetObjectOptions{})
+	object, err := c.GetObject(context, bucket, ctx.obj, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -62,15 +65,15 @@ func (m MapContext) Pairs() []*Pair {
 	return m.pairs
 }
 
-func (m MapContext) Emit(pair *Pair) error {
+func (m *MapContext) Emit(pair *Pair) error {
 	m.pairs = append(m.pairs, pair)
 
 	if pairs, ok := m.pairsMap[pair.Key]; !ok {
-		if pairs == nil {
-			pairs = make([]*Pair, 0)
-		}
-
-		pairs = append(pairs, pair)
+		p := make([]*Pair, 0)
+		p = append(p, pair)
+		m.pairsMap[pair.Key] = p
+	} else {
+		m.pairsMap[pair.Key] = append(pairs, pair)
 	}
 
 	return nil
@@ -82,35 +85,24 @@ func (m MapContext) KeyValues() *KeyValues {
 
 func (m MapContext) Release() error {
 	for key, pairs := range m.pairsMap {
-		fn := fmt.Sprintf("%s%s-%s", m.interBucket, key, m.id)
-		fp, err := ioutil.TempFile("/var/tmp", fn)
+		fn := fmt.Sprintf("%s%s-%s", m.interPrefix, key, m.id)
+
+		jsonBytes, err := json.Marshal(pairs)
 		if err != nil {
 			return err
 		}
 
-		stat, err := fp.Stat()
-		if err != nil {
-			_ = fp.Close()
-			return err
-		}
-
-		enc := gob.NewEncoder(fp)
-		if err = enc.Encode(pairs); err != nil {
-			_ = fp.Close()
-			return err
-		}
+		buffer := bytes.NewBuffer(jsonBytes)
 
 		context, cancel := stdCtx.WithTimeout(stdCtx.Background(), 5*time.Second)
 
-		_, err = m.minio.PutObject(context, m.interBucket, fn, fp, stat.Size(), minio.PutObjectOptions{})
+		_, err = m.minio.PutObject(context, m.interBucket, fn, buffer, int64(buffer.Len()), minio.PutObjectOptions{})
 		if err != nil {
 			cancel()
-			_ = fp.Close()
 			return err
 		}
 
 		cancel()
-		_ = fp.Close()
 	}
 
 	return nil

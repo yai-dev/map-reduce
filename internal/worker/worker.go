@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -119,6 +120,7 @@ func New(c *config.Config) (*Worker, error) {
 		notify:             make(chan struct{}, 1),
 		addr:               c.Host,
 		port:               c.Port,
+		master:             c.Worker.MasterAddress,
 		taskBucket:         c.TaskBucket,
 		intermediateBucket: c.IntermediateBucket,
 		intermediatePrefix: c.IntermediatePrefix,
@@ -339,6 +341,12 @@ AcquiringLoop:
 		case <-ctx.Done():
 			break AcquiringLoop
 		case <-ticker.C:
+			if w.task != nil {
+				continue
+			}
+
+			log.Printf("acquiring the task from master...")
+
 			payload := &master.TaskAcquirePayload{
 				TaskType:         w.mode.getTaskType(),
 				WorkerIdentifier: w.id,
@@ -355,6 +363,7 @@ AcquiringLoop:
 
 			resp, err := c.Notify(ctx, request)
 			if err != nil {
+				log.Printf("acquiring task failed: %s\n", err)
 				cancel()
 				continue
 			}
@@ -376,11 +385,11 @@ AcquiringLoop:
 			w.mu.Lock()
 			// update the task.
 			w.task = task
-			// notify the background run routine
-			w.notify <- struct{}{}
 			w.mu.Unlock()
 			// cancel the context avoid the context leak.
 			cancel()
+			// notify the background run routine
+			w.notify <- struct{}{}
 		default:
 			// do nothing, continue the next acquiring loop.
 		}
@@ -393,16 +402,17 @@ ProcessingLoop:
 		select {
 		case <-ctx.Done():
 			break ProcessingLoop
-		case <-w.notify:
+		case _ = <-w.notify:
 			task := w.task
 			atomic.StoreUint64(&w.running, 1)
 
 			switch w.mode {
 			case ModeMap:
 				// create worker context
-				mapContext, err := workerCtx.NewMapContext(w.minio, task.Object, task.ID, w.taskBucket, w.intermediateBucket, w.intermediatePrefix)
+				mapContext, err := workerCtx.NewMapContext(w.minio, task.Object, w.taskBucket, task.ID, w.intermediateBucket, w.intermediatePrefix)
 				if err != nil {
 					_ = w.notifyMaster(false)
+					log.Printf("create map context failed: %s\n", err)
 					goto Stop
 				}
 
@@ -410,22 +420,25 @@ ProcessingLoop:
 				if err = w.plugin.Map(mapContext); err != nil {
 					_ = mapContext.Release()
 					_ = w.notifyMaster(false)
+					log.Printf("user-defined map function failed: %s\n", err)
 					goto Stop
 				}
 
 				// release the context and persistence the result
 				if err = mapContext.Release(); err != nil {
 					_ = w.notifyMaster(false)
+					log.Printf("releasing context failed: %s\n", err)
 					goto Stop
 				}
 
 				// notification the master task has been done.
 				if err = w.notifyMaster(true); err != nil {
+					log.Printf("notify master failed: %s\n", err)
 					goto Stop
 				}
 			case ModeReduce:
 				// create reduce context
-				reduceContext, err := workerCtx.NewReduceContext(w.minio, task.Object, task.ID, w.taskBucket, w.resultBucket, w.resultPrefix)
+				reduceContext, err := workerCtx.NewReduceContext(w.minio, task.Object, w.taskBucket, task.ID, w.resultBucket, w.resultPrefix)
 				if err != nil {
 					_ = w.notifyMaster(false)
 					goto Stop
@@ -459,7 +472,16 @@ ProcessingLoop:
 
 func (w *Worker) notifyMaster(finished bool) error {
 	w.mu.Lock()
-	defer w.mu.Unlock()
+	defer func() {
+		if finished {
+			atomic.StoreUint64(&w.finished, w.finished+1)
+		}
+
+		w.task = nil
+
+		w.mu.Unlock()
+	}()
+
 	c := w.client
 	payload := &master.TaskCompletionPayload{
 		WorkerIdentifier: w.id,
@@ -478,16 +500,12 @@ func (w *Worker) notifyMaster(finished bool) error {
 		Payload: any,
 	}
 
-	stdCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	stdCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	_, err = c.Notify(stdCtx, request)
 	if err != nil {
 		return err
-	}
-
-	if finished {
-		atomic.StoreUint64(&w.finished, w.finished+1)
 	}
 
 	return nil

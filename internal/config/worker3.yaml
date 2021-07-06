@@ -1,16 +1,15 @@
-type: 'master'
+type: 'worker'
 network: 'tcp4'
 host: '0.0.0.0'
-port: 8080
-master:
-  snowflake:
-    node_id: 1
-  registry:
+port: 8083
+worker:
+  master_address: 'localhost:8080'
+  acquire_task_duration: '10s'
+  heartbeat_duration: '25s'
+  plugin:
+    name: 'word-count'
+    path: '/Volumes/SuenChunYu/Projects/Go/src/github.com/suenchunyu/map-reduce/plugin/word-count.so'
     enabled: true
-    expiry:
-      expire_duration: '30s'
-      expiry_limit: 2
-      expired_evict_interval: '60s'
 access_key: 'minioadmin'
 access_secret: 'minioadmin'
 s3_endpoint: 'localhost:9000'

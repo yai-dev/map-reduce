@@ -1,4 +1,4 @@
-package wc
+package main
 
 import (
 	"strings"
@@ -10,6 +10,8 @@ import (
 const Version = "1.0.0"
 
 type WordCountPlugin struct{}
+
+var Plugin WordCountPlugin
 
 func (w *WordCountPlugin) Version() string {
 	return Version

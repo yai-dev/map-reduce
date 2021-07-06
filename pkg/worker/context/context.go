@@ -4,16 +4,16 @@ package context
 // by the Map function and sent as parameters to
 // user-defined Reduce function.
 type Pair struct {
-	Key   string
-	Value interface{}
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
 }
 
 // KeyValues represents a set of values with the
 // same Key, and are typically passed as parameters
 // to user-defined Reduce functions for processing.
 type KeyValues struct {
-	Key    string
-	Values []interface{}
+	Key    string        `json:"key"`
+	Values []interface{} `json:"values"`
 }
 
 // Context holds the context needed to

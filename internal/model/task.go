@@ -6,6 +6,17 @@ import (
 
 type TaskFlag uint8
 
+func (t TaskFlag) String() string {
+	switch t {
+	case FlagMap:
+		return "Map"
+	case FlagReduce:
+		return "Reduce"
+	default:
+		return "Unknown"
+	}
+}
+
 const (
 	FlagUnknown TaskFlag = iota
 	FlagMap
