@@ -403,52 +403,53 @@ ProcessingLoop:
 				mapContext, err := workerCtx.NewMapContext(w.minio, task.Object, task.ID, w.taskBucket, w.intermediateBucket, w.intermediatePrefix)
 				if err != nil {
 					_ = w.notifyMaster(false)
-					continue
+					goto Stop
 				}
 
 				// call the plugin's Map function
 				if err = w.plugin.Map(mapContext); err != nil {
 					_ = mapContext.Release()
 					_ = w.notifyMaster(false)
-					continue
+					goto Stop
 				}
 
 				// release the context and persistence the result
 				if err = mapContext.Release(); err != nil {
 					_ = w.notifyMaster(false)
-					continue
+					goto Stop
 				}
 
 				// notification the master task has been done.
 				if err = w.notifyMaster(true); err != nil {
-					continue
+					goto Stop
 				}
 			case ModeReduce:
 				// create reduce context
 				reduceContext, err := workerCtx.NewReduceContext(w.minio, task.Object, task.ID, w.taskBucket, w.resultBucket, w.resultPrefix)
 				if err != nil {
 					_ = w.notifyMaster(false)
-					continue
+					goto Stop
 				}
 
 				// call the plugin's Reduce function
 				if err = w.plugin.Reduce(reduceContext); err != nil {
 					_ = reduceContext.Release()
 					_ = w.notifyMaster(false)
-					continue
+					goto Stop
 				}
 
 				// release the context and persistence the result
 				if err = reduceContext.Release(); err != nil {
 					_ = w.notifyMaster(false)
-					continue
+					goto Stop
 				}
 
 				// notification the master task has been done
 				if err = w.notifyMaster(true); err != nil {
-					continue
+					goto Stop
 				}
 			}
+		Stop:
 			atomic.StoreUint64(&w.running, 0)
 		default:
 			continue
