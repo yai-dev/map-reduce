@@ -1,24 +1,15 @@
-package worker
+package plugin
 
-import "plugin"
+import (
+	"plugin"
 
-type Pair struct {
-	Key   string
-	Value interface{}
-}
-
-type Context struct {
-	Object  string
-	Content []byte
-	Pairs   []*Pair
-	Reduced interface{}
-	Values  []interface{}
-}
+	"github.com/suenchunyu/map-reduce/pkg/worker/context"
+)
 
 type Plugin interface {
 	Version() string
-	Map(ctx *Context) error
-	Reduce(ctx *Context) error
+	Map(ctx context.Context) error
+	Reduce(ctx context.Context) error
 }
 
 func Load(path string) (Plugin, error) {

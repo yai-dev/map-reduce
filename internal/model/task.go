@@ -24,6 +24,7 @@ func FlagMapFromProtoBufferType(typ master.TaskType) TaskFlag {
 }
 
 type Task struct {
+	ID         string
 	Object     string
 	Flag       TaskFlag
 	Finished   bool

@@ -1,11 +1,10 @@
 package wc
 
 import (
-	"strconv"
 	"strings"
 	"unicode"
 
-	"github.com/suenchunyu/map-reduce/pkg/worker"
+	"github.com/suenchunyu/map-reduce/pkg/worker/context"
 )
 
 const Version = "1.0.0"
@@ -16,26 +15,29 @@ func (w *WordCountPlugin) Version() string {
 	return Version
 }
 
-func (w *WordCountPlugin) Map(ctx *worker.Context) error {
-	words := strings.FieldsFunc(string(ctx.Content), func(r rune) bool {
+func (w *WordCountPlugin) Map(ctx context.Context) error {
+	words := strings.FieldsFunc(string(ctx.Content()), func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
 
-	pairs := make([]*worker.Pair, 0)
-
 	for _, word := range words {
-		pair := &worker.Pair{
+		pair := &context.Pair{
 			Key:   word,
 			Value: 1,
 		}
-		pairs = append(pairs, pair)
+		if err := ctx.Emit(pair); err != nil {
+			return err
+		}
 	}
 
-	ctx.Pairs = pairs
 	return nil
 }
 
-func (w *WordCountPlugin) Reduce(ctx *worker.Context) error {
-	ctx.Reduced = strconv.Itoa(len(ctx.Values))
-	return nil
+func (w *WordCountPlugin) Reduce(ctx context.Context) error {
+	keyValues := ctx.KeyValues()
+	pair := &context.Pair{
+		Key:   keyValues.Key,
+		Value: len(keyValues.Values),
+	}
+	return ctx.Emit(pair)
 }
